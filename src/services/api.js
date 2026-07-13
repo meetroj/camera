@@ -4,15 +4,19 @@
 // request must send credentials. There is no token to store in localStorage —
 // that's deliberate: a token there is readable by any XSS payload.
 
+import { ApiError } from './apiError'
+import { mockHostApi } from './mockHostApi'
+
 const BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
-export class ApiError extends Error {
-  constructor(status, message, code) {
-    super(message)
-    this.status = status
-    this.code = code
-  }
-}
+// No VITE_API_URL means there's no backend to talk to (e.g. the Vercel preview),
+// so fall back to the in-memory mock rather than firing doomed requests at
+// localhost:5000 — which, from a visitor's browser, is *their* machine.
+// Set VITE_MOCK_API=true to force the mock even when a real API is configured.
+export const USE_MOCK_API =
+  import.meta.env.VITE_MOCK_API === 'true' || !import.meta.env.VITE_API_URL
+
+export { ApiError } from './apiError'
 
 async function request(method, path, { body, token } = {}) {
   const headers = {}
@@ -53,7 +57,7 @@ export const api = {
 }
 
 // ── Host ───────────────────────────────────────────────────────────────────
-export const hostApi = {
+const realHostApi = {
   signup: (name, email, password) => api.post('/auth/signup', { name, email, password }),
   login: (email, password) => api.post('/auth/login', { email, password }),
   logout: () => api.post('/auth/logout'),
@@ -75,4 +79,11 @@ export const hostApi = {
   deletePhoto: (photoId) => api.delete(`/photos/${photoId}`),
 
   createOrder: (eventId) => api.post('/payments/order', { eventId }),
+}
+
+// Every host page imports `hostApi` and never learns which one it got.
+export const hostApi = USE_MOCK_API ? mockHostApi : realHostApi
+
+if (USE_MOCK_API && typeof console !== 'undefined') {
+  console.info('[pov] Mock host API active — no backend. Any email/password signs in.')
 }
