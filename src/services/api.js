@@ -1,0 +1,78 @@
+// The one place that talks to the MERN backend.
+//
+// The host's session lives in an httpOnly cookie the server sets, so every
+// request must send credentials. There is no token to store in localStorage —
+// that's deliberate: a token there is readable by any XSS payload.
+
+const BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+
+export class ApiError extends Error {
+  constructor(status, message, code) {
+    super(message)
+    this.status = status
+    this.code = code
+  }
+}
+
+async function request(method, path, { body, token } = {}) {
+  const headers = {}
+  if (body) headers['Content-Type'] = 'application/json'
+  if (token) headers.Authorization = `Bearer ${token}` // guest routes only
+
+  let res
+  try {
+    res = await fetch(`${BASE}${path}`, {
+      method,
+      headers,
+      credentials: 'include', // carries the host session cookie
+      body: body ? JSON.stringify(body) : undefined,
+    })
+  } catch {
+    // fetch only rejects on a network-level failure — the API being down.
+    throw new ApiError(0, "Can't reach the server. Is the backend running on port 5000?")
+  }
+
+  let data = null
+  try {
+    data = await res.json()
+  } catch {
+    /* some responses have no body */
+  }
+
+  if (!res.ok) {
+    throw new ApiError(res.status, data?.error || `Request failed (${res.status})`, data?.code)
+  }
+  return data
+}
+
+export const api = {
+  get: (path, opts) => request('GET', path, opts),
+  post: (path, body, opts) => request('POST', path, { body, ...opts }),
+  patch: (path, body, opts) => request('PATCH', path, { body, ...opts }),
+  delete: (path, opts) => request('DELETE', path, opts),
+}
+
+// ── Host ───────────────────────────────────────────────────────────────────
+export const hostApi = {
+  signup: (name, email, password) => api.post('/auth/signup', { name, email, password }),
+  login: (email, password) => api.post('/auth/login', { email, password }),
+  logout: () => api.post('/auth/logout'),
+  me: () => api.get('/auth/me'),
+  updateMe: (patch) => api.patch('/auth/me', patch),
+
+  plans: () => api.get('/plans'),
+
+  listEvents: () => api.get('/events'),
+  createEvent: (data) => api.post('/events', data),
+  getEvent: (id) => api.get(`/events/${id}`),
+  updateEvent: (id, patch) => api.patch(`/events/${id}`, patch),
+  endEvent: (id) => api.post(`/events/${id}/end`),
+  revealEvent: (id) => api.post(`/events/${id}/reveal`),
+  deleteEvent: (id) => api.delete(`/events/${id}`),
+  listGuests: (id) => api.get(`/events/${id}/guests`),
+
+  photos: (eventId, page = 1) => api.get(`/photos/event/${eventId}?page=${page}`),
+  deletePhoto: (photoId) => api.delete(`/photos/${photoId}`),
+
+  createOrder: (eventId) => api.post('/payments/order', { eventId }),
+}

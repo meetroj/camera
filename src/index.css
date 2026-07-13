@@ -1,0 +1,83 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background-color: #0a0a0a;
+  color: #f5e6d0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+body {
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+video {
+  object-fit: cover;
+}
+
+/* Scrollable areas */
+.scrollable {
+  overflow-y: auto;
+  height: 100%;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Safe area padding for notch phones */
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes flash {
+  0% { opacity: 0.85; }
+  100% { opacity: 0; }
+}
+
+@keyframes pulseCta {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245, 230, 208, 0.4); }
+  50% { box-shadow: 0 0 0 14px rgba(245, 230, 208, 0); }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid rgba(245, 230, 208, 0.15);
+  border-top-color: #f5e6d0;
+  border-radius: 50%;
+  animation: spin 0.75s linear infinite;
+}
+
+.shutter-flash {
+  animation: flash 0.15s ease-out forwards;
+}
+
+.pulse-cta {
+  animation: pulseCta 2.2s ease-in-out infinite;
+}
+
+.slide-up {
+  animation: slideUp 0.35s ease-out forwards;
+}
